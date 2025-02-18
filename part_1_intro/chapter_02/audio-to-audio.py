@@ -65,7 +65,7 @@ async def audio_loop():
                     if not model_speaking:
                         try:
                             data = await asyncio.to_thread(input_stream.read, CHUNK_SIZE, exception_on_overflow=False)
-                            await session.send({"data": data, "mime_type": "audio/pcm"}, end_of_turn=True)
+                            await session.send(input={"data": data, "mime_type": "audio/pcm"}, end_of_turn=True)
                         except OSError as e:
                             print(f"Audio input error: {e}")
                             await asyncio.sleep(0.1)
