@@ -2,6 +2,8 @@
 
 ![Project Pastra](assets/project_pastra.png)
 
+***NEW: Project Pastra has a new enterprise-ready architecure - find out more about it on https://github.com/heiko-hotz/project-pastra***
+
 This repository serves as a comprehensive developer guide for [Google's Gemini Multimodal Live API](https://developers.googleblog.com/en/gemini-2-0-level-up-your-apps-with-real-time-multimodal-interactions/). Through a structured, hands-on approach, you'll learn how to build sophisticated real-time applications that can see, hear, and interact naturally using Gemini's multimodal capabilities.
 
 ## What You'll Learn
