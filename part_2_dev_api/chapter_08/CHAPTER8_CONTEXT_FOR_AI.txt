@@ -1,0 +1,50 @@
+Project Pastra (Chapter 8) - Persistent AI Context
+==================================================
+
+Project Description:
+--------------------
+- Project Pastra is a mobile-first, multimodal AI assistant web app (inspired by Google DeepMind's Project Astra) built in Chapter 8 of the gemini-multimodal-live-dev-guide.
+- It supports real-time audio, video, and function calling (weather, stock, code execution, search) via the Gemini API.
+- The app is designed for both mobile and desktop browsers, with a modern, responsive UI.
+
+Hosting & Deployment:
+---------------------
+- Hosted on Google Cloud Run at: https://project-pastra-dev-api-147586231663.us-central1.run.app
+- Source code is in: /Users/ofekduani/Desktop/project pastra/gemini-multimodal-live-dev-guide/part_2_dev_api/chapter_08/
+- Docker is used for containerization; Nginx serves the static files.
+
+API Keys Required:
+------------------
+- GEMINI_API_KEY (for Gemini API)
+- OPENWEATHER_API_KEY (for weather tool)
+- FINNHUB_API_KEY (for stock tool)
+
+Deployment Commands:
+--------------------
+# Build for correct platform (Apple Silicon fix)
+docker build --platform linux/amd64 -t gcr.io/amitai-454317/project-pastra-dev-api .
+
+# Push to Google Container Registry
+docker push gcr.io/amitai-454317/project-pastra-dev-api
+
+# Deploy to Cloud Run
+gcloud run deploy project-pastra-dev-api \
+  --image gcr.io/amitai-454317/project-pastra-dev-api \
+  --platform managed \
+  --region us-central1 \
+  --allow-unauthenticated \
+  --set-env-vars GEMINI_API_KEY='YOUR_GEMINI_API_KEY',OPENWEATHER_API_KEY='YOUR_OPENWEATHER_API_KEY',FINNHUB_API_KEY='YOUR_FINNHUB_API_KEY'
+
+When to Redeploy:
+-----------------
+- Any code change (HTML, JS, CSS, etc.)
+- API key or environment variable change
+- Configuration or dependency update
+
+How to Update This Context:
+---------------------------
+- If project structure, deployment process, or hosting changes, update this file.
+- If new features or tools are added, document them here.
+- If you (the AI) learn new best practices or encounter issues, add troubleshooting notes here.
+
+(Ask the user if you should update this file when major changes occur.) 

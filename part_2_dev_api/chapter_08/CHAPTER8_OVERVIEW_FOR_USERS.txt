@@ -1,0 +1,34 @@
+Project Pastra (Chapter 8) - User Overview
+===========================================
+
+What is Project Pastra?
+-----------------------
+Project Pastra is a mobile-first, multimodal AI assistant web application inspired by Google DeepMind's Project Astra. It allows users to interact with an AI assistant using voice, video, and text, and provides real-time responses, weather, and stock information. The app is designed for both mobile and desktop browsers.
+
+Where is it hosted?
+-------------------
+The live application is hosted on Google Cloud Run at:
+https://project-pastra-dev-api-147586231663.us-central1.run.app
+
+What is needed to make a change?
+--------------------------------
+- You need access to the source code, located in the Chapter 8 directory:
+  /Users/ofekduani/Desktop/project pastra/gemini-multimodal-live-dev-guide/part_2_dev_api/chapter_08/
+- You need Docker and Google Cloud SDK installed and configured.
+- You need valid API keys for Gemini, OpenWeather, and Finnhub.
+- After making code changes, you must rebuild the Docker image, push it to Google Container Registry, and redeploy to Cloud Run.
+
+When is it necessary to redeploy?
+---------------------------------
+- Any time you change the source code (HTML, JS, CSS, etc.).
+- When you update or rotate API keys.
+- When you change environment variables or configuration.
+- When you want to roll back or update the live app.
+
+How to interact with the app?
+-----------------------------
+- Open the URL above in a browser (mobile or desktop).
+- Grant microphone (and optionally camera) permissions.
+- Use the floating action buttons to interact with the AI assistant.
+
+For more details, see the README files in the project directory. 

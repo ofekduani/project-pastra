@@ -12,7 +12,7 @@ The application's functionality can be broken down into several key components:
 
 *   **API Endpoint:** The application connects to the Gemini API using a specific WebSocket endpoint URL:
     ```
-    wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key=${apiKey}
+    wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key="AIzaSyBXj95Ek87Z4qMe6DJJCmeMttuvEKrBItc"
     ```
     This URL includes the API host, the service path, and an API key for authentication. Replace `${apiKey}` with your actual API key.
 *   **WebSocket Object:** A new `WebSocket` object is created in JavaScript, initiating the connection:

@@ -58,8 +58,22 @@
     import { getWeather } from 'http://localhost:8000/shared/tools/weather-api.js';
     import { getStockPrice } from 'http://localhost:8000/shared/tools/stock-api.js';
 
+// Mock function to simulate creating a calendar event
+    function createCalendarEvent(args) {
+      const time = args.time;
+      const location = args.location;
+
+      if (time && location) {
+        const confirmationMessage = `Great, a date has been set up on ${time} at ${location}.`;
+        console.log("Mock Calendar Tool Success:", confirmationMessage);
+        return { success: true, message: confirmationMessage }; // Return a structured result
+      } else {
+        console.log("Mock Calendar Tool Failed: Missing parameters");
+        return { success: false, message: "Missing required parameters (time or location)." };
+      }
+    }
     const output = document.getElementById('output');
-    const apiKey = '<YOUR_API_KEY>'; // Replace with your actual API key
+    const apiKey = 'AIzaSyA4CQ9pOzPnDnPa41YGqjsy0uJSAE8EXsg'; // Replace with your actual API key
     const host = 'generativelanguage.googleapis.com';
     const endpoint = `wss://${host}/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key=${apiKey}`;
 
@@ -126,6 +140,24 @@
                   }
                 },
                 required: ["symbol"]
+              }
+            },
+            {
+              name: "create_calendar_event",
+              description: "Creates a new Google Calendar event",
+              parameters: {
+                type: "OBJECT",
+                properties: {
+                  time: {
+                    type: "STRING",
+                    description: "The time of the event (e.g., 'tomorrow at 3 PM', 'May 5th at 10:00')"
+                  },
+                  location: {
+                    type: "STRING",
+                    description: "The location of the event (e.g., 'Conference Room A', 'online')"
+                  }
+                },
+                required: ["time", "location"] // Both parameters are required
               }
             }]
           },
@@ -333,6 +365,35 @@
                 }
               }
             });
+          } else if (call.name === 'create_calendar_event') { // Add this block
+            logMessage(`Function: ${call.name}`);
+            logMessage(`Parameters: time = "${call.args.time}", location = "${call.args.location}"`);
+
+            const result = createCalendarEvent(call.args); // Call your new function
+
+            logMessage(`Tool Response Result: ${JSON.stringify(result)}`); // Log the result
+
+            functionResponses.push({
+              id: call.id,
+              name: call.name,
+              response: {
+                result: {
+                  object_value: result // Include the result object here
+                }
+              }
+            });
+          } else {
+             // Handle unknown tool calls if necessary
+             console.warn(`Unknown tool call: ${call.name}`);
+             functionResponses.push({
+               id: call.id,
+               name: call.name,
+               response: {
+                 error: {
+                   message: `Tool '${call.name}' not found.`
+                 }
+               }
+             });
           }
         }
 
