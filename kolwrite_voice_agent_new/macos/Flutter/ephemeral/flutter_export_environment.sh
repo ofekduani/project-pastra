@@ -1,7 +1,7 @@
 #!/bin/sh
 # This is a generated file; do not edit or check into version control.
-export "FLUTTER_ROOT=/Users/ofekduani/flutter"
-export "FLUTTER_APPLICATION_PATH=/Users/ofekduani/Desktop/pastra app/project-pastra/kolwrite_voice_agent_new"
+export "FLUTTER_ROOT=/opt/flutter"
+export "FLUTTER_APPLICATION_PATH=/app/kolwrite_voice_agent_new"
 export "COCOAPODS_PARALLEL_CODE_SIGN=true"
 export "FLUTTER_BUILD_DIR=build"
 export "FLUTTER_BUILD_NAME=1.0.0"

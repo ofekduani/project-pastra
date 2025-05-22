@@ -1,4 +1,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Request microphone permission -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- Optional: if you plan to save recordings to external storage -->
+    <!-- <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" /> -->
+    <!-- <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" /> -->
+
     <application
         android:label="kolwrite_voice_agent_new"
         android:name="${applicationName}"
