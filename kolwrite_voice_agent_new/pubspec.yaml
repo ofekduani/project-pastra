@@ -37,7 +37,7 @@ dependencies:
   flutter_sound: ^9.2.13 # for audio recording
   just_audio: ^0.9.36 # for audio playback
   web_socket_channel: ^2.4.0 # for WebSocket communication
-  permission_handler: ^10.2.0 # for managing microphone permissions
+  permission_handler: ^12.0.0+1 # for managing microphone permissions
   http: ^0.13.3 # for making HTTP requests in dummy function calls
 
 dev_dependencies:

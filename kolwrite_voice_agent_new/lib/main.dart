@@ -52,8 +52,8 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
   String _statusText = "Initializing..."; // Changed initial status
   String _transcribedText = "";
   String _geminiResponseText = ""; // For text part of Gemini's response
-  String _currentTurnId = ""; // To store turn_id from Gemini
-  String _previousAudioId = ""; // To store previous_audio_id from Gemini
+  final String _currentTurnId = ""; // To store turn_id from Gemini
+  final String _previousAudioId = ""; // To store previous_audio_id from Gemini
 
   StreamSubscription? _recordingSubscription;
   StreamSubscription? _geminiSetupSubscription;
