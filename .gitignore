@@ -172,4 +172,6 @@ cython_debug/
 
 .DS_Store
 
-_*.html
+_*.html/flutter/
+/flutter_linux_3.22.1-stable.tar.xz
+/flutter_linux_3.32.0-stable.tar.xz
