@@ -1,0 +1,188 @@
+# KolWrite Voice Agent - Gemini Integration Project
+
+## PROJECT OVERVIEW
+
+### Current State
+- We have a basic Flutter application called "KolWrite Voice Agent" with minimal UI
+- It displays a title, disabled microphone button, and "Waiting for function calls..." text
+- No actual functionality is implemented yet
+
+### Reference Implementation
+- Project Pastra: A fully functional web-based voice agent using Google Gemini
+- Located in part_2_dev_api/chapter_08 of our codebase
+- Provides complete implementation of Gemini API communication, audio handling, and function calling
+
+### Project Goal
+Implement a voice agent in our Flutter app that:
+- Allows real-time voice conversation with Google Gemini AI
+- Functions correctly on Android devices/emulators
+- Replicates the core functionality of Project Pastra but in a native mobile app
+
+## TECHNICAL SPECIFICATIONS
+
+### Communication Architecture
+
+1. **WebSocket Protocol**
+   - Direct WebSocket connection to Gemini API endpoint
+   - Connection URL format: `wss://generativelanguage.googleapis.com/ws/v1beta/models/gemini-2.0-flash-exp:streamGenerateContent?key=[API_KEY]`
+   - Will require Flutter's `web_socket_channel` package
+
+2. **Message Formats (Critical)**
+   - Setup Message:
+     ```json
+     {
+       "setup": {
+         "model": "models/gemini-2.0-flash-exp",
+         "generation_config": {
+           "response_modalities": ["audio"],
+           "speech_config": {
+             "voice_config": {
+               "prebuilt_voice_config": {
+                 "voice_name": "Puck"
+               }
+             }
+           }
+         },
+         "system_instruction": {
+           "parts": [{
+             "text": "[Content of system-instructions.txt]"
+           }]
+         },
+         "tools": [
+           {
+             "function_declarations": [
+               {
+                 "name": "get_weather",
+                 "description": "Get current weather information for a city",
+                 "parameters": {
+                   "type": "object",
+                   "properties": {
+                     "city": {
+                       "type": "string",
+                       "description": "City name"
+                     }
+                   },
+                   "required": ["city"]
+                 }
+               },
+               // Other function declarations
+             ]
+           }
+         ]
+       }
+     }
+     ```
+   
+   - Audio Input Message:
+     ```json
+     {
+       "realtime_input": {
+         "media_chunks": [{
+           "mime_type": "audio/pcm",
+           "data": "[base64-encoded audio]"
+         }]
+       }
+     }
+     ```
+   
+   - End Turn Message:
+     ```json
+     {
+       "client_content": {
+         "turns": [{
+           "role": "user",
+           "parts": []
+         }],
+         "turn_complete": true
+       }
+     }
+     ```
+   
+   - Tool Response Message:
+     ```json
+     {
+       "tool_response": {
+         "function_responses": [
+           {
+             "id": "function-id",
+             "name": "get_weather",
+             "response": {
+               "object_value": {
+                 // Weather data object
+               }
+             }
+           }
+         ]
+       }
+     }
+     ```
+
+### Audio Processing
+
+1. **Recording (Input)**
+   - Must capture audio at 16kHz sample rate in PCM16 format
+   - Convert to base64 for transmission
+   - Stream in chunks rather than complete files
+   - Will require Flutter's `flutter_sound` or similar package
+
+2. **Playback (Output)**
+   - Process incoming base64-encoded PCM16 audio
+   - Queue audio buffers for continuous playback
+   - Handle potential streaming interruptions
+
+### Function Calling
+
+1. **Available Tools**
+   - Weather information (OpenWeatherMap API)
+   - Stock market data (Finnhub API)
+   - Potentially Google Search and code execution
+
+2. **Tool Execution Flow**
+   - Receive tool call request from Gemini
+   - Execute appropriate API call
+   - Format and return results
+   - Display status to user
+
+## IMPLEMENTATION CHALLENGES
+
+1. **Audio Handling in Flutter**
+   - Real-time audio streaming is complex on mobile
+   - Need proper permissions handling
+   - Battery and performance considerations
+
+2. **WebSocket Reliability**
+   - Mobile networks can be unreliable
+   - Need connection state management and reconnection logic
+   - May require fallback mechanisms
+
+3. **API Key Security**
+   - Avoid hardcoding API keys in app
+   - Consider using secure storage or backend proxy
+
+4. **UI Responsiveness**
+   - Ensure UI remains responsive during audio processing
+   - Provide clear feedback on connection/processing status
+
+5. **Media Format Compatibility**
+   - Ensure audio formats match exactly what Gemini expects
+   - Proper encoding/decoding between formats
+
+## IMPLEMENTATION APPROACH
+
+1. **Core Components Needed:**
+   - WebSocket connection manager
+   - Audio recorder and streamer
+   - Message formatter/parser
+   - Function call handler
+   - UI controller
+
+2. **Development Phases:**
+   - Phase 1: Basic WebSocket connection and message exchange
+   - Phase 2: Audio recording and transmission
+   - Phase 3: Audio playback from responses
+   - Phase 4: Function calling implementation
+   - Phase 5: UI refinement and error handling
+
+## SIMPLE EXPLANATION
+
+KolWrite Voice Agent will let you have conversations with Google's AI assistant using just your voice. You'll be able to ask questions, get information about the weather or stocks, and have natural back-and-forth conversations - all through your Android phone. It's like having a super-smart assistant in your pocket that can understand what you're saying and respond to you by speaking back, similar to other voice assistants but powered by Google's latest AI technology.
