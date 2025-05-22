@@ -13,10 +13,10 @@ import 'package:kolwrite_voice_agent/main.dart';
 void main() {
   testWidgets('App launches with title and mic button', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const KolWriteVoiceAgentApp());
+    await tester.pumpWidget(const MyApp());
 
-    // Verify that the main UI elements are present.
-    expect(find.text('KolWrite Voice Agent'), findsOneWidget);
-    expect(find.byIcon(Icons.mic_none), findsOneWidget);
+    // Verify that main UI elements are present.
+    expect(find.text('Google Sign-In'), findsOneWidget);
+    expect(find.text('Sign in with Google'), findsOneWidget);
   });
 }
