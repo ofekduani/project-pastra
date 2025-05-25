@@ -1,0 +1,14 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Match the path for user-specific conversation entries
+    match /users/{userId}/conversations/{conversationId} {
+      // Allow read and write access if the userId in the path 
+      // is our specific hardcoded user "test_user_001".
+      // This approach is used because we are not relying on Firebase Auth
+      // to populate request.auth.uid to match the userId in the path for this specific case.
+      allow read, write: if userId == "test_user_001";
+    }
+  }
+}
