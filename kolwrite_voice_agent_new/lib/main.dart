@@ -134,150 +134,121 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
       // For this app, Gemini API connection can still proceed.
     }
 
-    // Only connect to Gemini API if not in test mode
-    if (!_testMode) {
-      // Connect to Gemini API
-      // Note: API key is handled within GeminiApi class constructor
-      await _geminiApi.connect(); 
-
-      // Setup Gemini API listeners
-      _geminiSetupSubscription = _geminiApi.onSetupComplete.listen((_) {
-        if (_isMicrophonePermissionGranted) { // Only update if permission was granted
-          setState(() {
-            _statusText = "API Ready. Press mic to start.";
-          });
-        }
-        print("Gemini API setup complete.");
+    // Listen for errors before connecting
+    bool connectionFailed = false;
+    _geminiErrorSubscription = _geminiApi.onError.listen((errorMessage) {
+      connectionFailed = true;
+      setState(() {
+        _statusText = "API Error: $errorMessage";
+        _micStatus = MicStatus.idle;
       });
+      print("Gemini API error: $errorMessage");
+    });
 
-      _geminiAudioSubscription = _geminiApi.onAudioData.listen((audioData) {
-        setState(() {
-          _micStatus = MicStatus.speaking;
-          _statusText = "Speaking...";
-        });
-        // Convert base64 string to Uint8List
-        final decodedAudio = base64.decode(audioData);
-        _audioHandler.playAudioChunk(decodedAudio);
-      });
-      
-      _playbackCompleteSubscription = _audioHandler.playbackCompleteStream.listen((_) {
-          // If playback finishes and we are in speaking state, transition appropriately.
-          // This might need coordination with onTurnComplete from Gemini.
-          if (_micStatus == MicStatus.speaking) {
-               // If turn is also complete, go to idle. Otherwise, Gemini might send more.
-              // For now, let's assume if speaking stops, we await next instruction or turn completion.
-              // setState(() {
-              //    _statusText = "Finished speaking. Waiting for next action or turn completion.";
-              // });
-          }
-      });
+    await _geminiApi.connect();
 
-      _geminiToolCallSubscription = _geminiApi.onToolCall.listen((toolCall) async {
-        final functionName = toolCall['name'];
-        final args = toolCall['args'] as Map<String, dynamic>;
-        final toolCallId = toolCall['tool_call_id'] as String; // Assuming API sends this
-
-        setState(() {
-          _statusText = "Executing function: $functionName with args: $args";
-          _geminiResponseText += "\nTool Call: $functionName(${args.entries.map((e) => "${e.key}: ${e.value}").join(', ')})";
-        });
-        print("Tool call received: $functionName, Args: $args, ID: $toolCallId");
-
-        Map<String, dynamic> result;
-        try {
-          result = await tools.dispatchToolCall(functionName, args);
-           print("Tool call result: $result");
-        } catch (e) {
-          result = {'error': 'Failed to execute tool $functionName: $e'};
-           print("Tool call error: $e");
-        }
-        
-        _geminiApi.sendToolResponse(toolCallId, result);
-        setState(() {
-          _statusText = "Function $functionName executed. Result: ${jsonEncode(result)}";
-           _geminiResponseText += "\nTool Result for $functionName: ${jsonEncode(result)}";
-        });
-      });
-
-      _geminiInterruptedSubscription = _geminiApi.onInterrupted.listen((_) {
-        setState(() {
-          _statusText = "Interaction interrupted by API.";
-          // Potentially stop recording/playback if active
-          if (_audioHandler.isRecording) {
-            _audioHandler.stopRecording();
-          }
-          if (_audioHandler.isPlaying) {
-              _audioHandler.stopPlayback();
-          }
-          _micStatus = MicStatus.idle; // Or some other appropriate status
-        });
-         print("Gemini API interrupted.");
-      });
-
-      _geminiTurnCompleteSubscription = _geminiApi.onTurnComplete.listen((_) {
-        setState(() {
-          _statusText = "Turn complete. Press mic for new turn.";
-          // _transcribedText = ""; // Clear previous turn's transcription
-          _geminiResponseText = ""; // Clear previous turn's response
-          _micStatus = MicStatus.idle;
-        });
-        print("Gemini API turn complete.");
-        // Potentially get turn_id and previous_audio_id here if provided in the message
-        // For now, these are not explicitly handled from the turnComplete message itself
-      });
-
-      _geminiErrorSubscription = _geminiApi.onError.listen((errorMessage) {
-        setState(() {
-          _statusText = "API Error: $errorMessage";
-          _micStatus = MicStatus.idle; // Reset status on error
-        });
-        print("Gemini API error: $errorMessage");
-      });
-
-      _geminiCloseSubscription = _geminiApi.onClose.listen((_) {
-        setState(() {
-          _statusText = "API Connection closed. Please restart.";
-          _micStatus = MicStatus.idle;
-        });
-        print("Gemini API connection closed.");
-      });
-
-      // Send initial setup message to Gemini
-      // This should include system_instruction and tools if required by API
+    if (!connectionFailed) {
       _geminiApi.sendDefaultSetup(
-          modelName: "gemini-1.5-flash-latest", // Or "gemini-1.5-pro-latest"
-          tools: _geminiTools,
-          // languageCode: 'en-US' // Default is en-US in GeminiApi
-          // turnId: _currentTurnId, // For first setup, these are empty or null
-          // previousAudioId: _previousAudioId,
+        modelName: "gemini-1.5-flash-latest",
+        tools: _geminiTools,
       );
-      // Add system instruction if your GeminiApi's sendDefaultSetup or a specific setup message supports it.
-      // For now, assuming sendDefaultSetup can be extended or a new method in GeminiApi handles this.
-      // The current GeminiApi.sendDefaultSetup does not have a system_instruction parameter.
-      // This might need a custom setup message or modification of GeminiApi.
-      // Let's assume for now this setup is sufficient or GeminiApi handles system instructions internally.
-      // If a more specific setup message is needed:
-      // _geminiApi.sendSetupMessage({
-      //   'model_name': 'gemini-1.5-flash-latest',
-      //   'tools': _geminiTools,
-      //   'system_instruction': {'parts': [{'text': _systemInstruction}]}, // Example structure
-      //    // ... other configs from sendDefaultSetup ...
-      // });
-      // The above is a guess. The actual structure for system_instruction needs to be based on API docs.
-      // Project Pastra's JS uses a 'context' object for system instructions.
-      // Let's assume GeminiApi's `sendDefaultSetup` is configured for general use for now.
-      // Update: GeminiApi.sendDefaultSetup was updated to include tools, modelName. System instruction is not directly part of it.
-      // For system instructions, it's often part of the initial messages in a turn or session config.
-      // For now, we rely on the tools definition and model behavior.
     } else {
-      // In test mode, set up playback complete listener for audio testing
-      _playbackCompleteSubscription = _audioHandler.playbackCompleteStream.listen((_) {
-        setState(() {
-          _statusText = "TEST MODE: Playback complete. Press mic to record again.";
-          _micStatus = MicStatus.idle;
-        });
-      });
+      print("Not sending setup because connection failed.");
     }
+
+    // Setup Gemini API listeners
+    _geminiSetupSubscription = _geminiApi.onSetupComplete.listen((_) {
+      if (_isMicrophonePermissionGranted) { // Only update if permission was granted
+        setState(() {
+          _statusText = "API Ready. Press mic to start.";
+        });
+      }
+      print("Gemini API setup complete.");
+    });
+
+    _geminiAudioSubscription = _geminiApi.onAudioData.listen((audioData) {
+      setState(() {
+        _micStatus = MicStatus.speaking;
+        _statusText = "Speaking...";
+      });
+      // Convert base64 string to Uint8List
+      final decodedAudio = base64.decode(audioData);
+      _audioHandler.playAudioChunk(decodedAudio);
+    });
+    
+    _playbackCompleteSubscription = _audioHandler.playbackCompleteStream.listen((_) {
+        // If playback finishes and we are in speaking state, transition appropriately.
+        // This might need coordination with onTurnComplete from Gemini.
+        if (_micStatus == MicStatus.speaking) {
+             // If turn is also complete, go to idle. Otherwise, Gemini might send more.
+            // For now, let's assume if speaking stops, we await next instruction or turn completion.
+            // setState(() {
+            //    _statusText = "Finished speaking. Waiting for next action or turn completion.";
+            // });
+        }
+    });
+
+    _geminiToolCallSubscription = _geminiApi.onToolCall.listen((toolCall) async {
+      final functionName = toolCall['name'];
+      final args = toolCall['args'] as Map<String, dynamic>;
+      final toolCallId = toolCall['tool_call_id'] as String; // Assuming API sends this
+
+      setState(() {
+        _statusText = "Executing function: $functionName with args: $args";
+        _geminiResponseText += "\nTool Call: $functionName(${args.entries.map((e) => "${e.key}: ${e.value}").join(', ')})";
+      });
+      print("Tool call received: $functionName, Args: $args, ID: $toolCallId");
+
+      Map<String, dynamic> result;
+      try {
+        result = await tools.dispatchToolCall(functionName, args);
+         print("Tool call result: $result");
+      } catch (e) {
+        result = {'error': 'Failed to execute tool $functionName: $e'};
+         print("Tool call error: $e");
+      }
+      
+      _geminiApi.sendToolResponse(toolCallId, result);
+      setState(() {
+        _statusText = "Function $functionName executed. Result: ${jsonEncode(result)}";
+         _geminiResponseText += "\nTool Result for $functionName: ${jsonEncode(result)}";
+      });
+    });
+
+    _geminiInterruptedSubscription = _geminiApi.onInterrupted.listen((_) {
+      setState(() {
+        _statusText = "Interaction interrupted by API.";
+        // Potentially stop recording/playback if active
+        if (_audioHandler.isRecording) {
+          _audioHandler.stopRecording();
+        }
+        if (_audioHandler.isPlaying) {
+            _audioHandler.stopPlayback();
+        }
+        _micStatus = MicStatus.idle; // Or some other appropriate status
+      });
+       print("Gemini API interrupted.");
+    });
+
+    _geminiTurnCompleteSubscription = _geminiApi.onTurnComplete.listen((_) {
+      setState(() {
+        _statusText = "Turn complete. Press mic for new turn.";
+        // _transcribedText = ""; // Clear previous turn's transcription
+        _geminiResponseText = ""; // Clear previous turn's response
+        _micStatus = MicStatus.idle;
+      });
+      print("Gemini API turn complete.");
+      // Potentially get turn_id and previous_audio_id here if provided in the message
+      // For now, these are not explicitly handled from the turnComplete message itself
+    });
+
+    _geminiCloseSubscription = _geminiApi.onClose.listen((_) {
+      setState(() {
+        _statusText = "API Connection closed. Please restart.";
+        _micStatus = MicStatus.idle;
+      });
+      print("Gemini API connection closed.");
+    });
   }
 
   Future<void> _loadSavedRecordings() async {
