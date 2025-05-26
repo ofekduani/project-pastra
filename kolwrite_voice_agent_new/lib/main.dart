@@ -48,7 +48,7 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
   final String _apiKey = 'AIzaSyAYpEO4Av_3R0QMnMX-5IAd0OBDGWBdCDU'; // Hardcoded API Key
 
   late AudioHandler _audioHandler;
-  late GeminiApi _geminiApi;
+  late GeminiApiInterface _geminiApiInterface;
 
   // Add test mode flag
   bool _testMode = true; // Set to true to test audio without WebSocket
@@ -109,7 +109,7 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
   void initState() {
     super.initState();
     _audioHandler = AudioHandler();
-    _geminiApi = GeminiApi(); // API key is hardcoded in GeminiApi class
+    _geminiApiInterface = GeminiApiInterface();
 
     _initializeAgent();
     _loadSavedRecordings(); // Load saved recordings on init
@@ -138,19 +138,10 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
     if (!_testMode) {
       // Connect to Gemini API
       // Note: API key is handled within GeminiApi class constructor
-      await _geminiApi.connect(); 
+      await _geminiApiInterface.connect(); 
 
       // Setup Gemini API listeners
-      _geminiSetupSubscription = _geminiApi.onSetupComplete.listen((_) {
-        if (_isMicrophonePermissionGranted) { // Only update if permission was granted
-          setState(() {
-            _statusText = "API Ready. Press mic to start.";
-          });
-        }
-        print("Gemini API setup complete.");
-      });
-
-      _geminiAudioSubscription = _geminiApi.onAudioData.listen((audioData) {
+      _geminiSetupSubscription = _geminiApiInterface.onAudioReceived.listen((audioData) {
         setState(() {
           _micStatus = MicStatus.speaking;
           _statusText = "Speaking...";
@@ -172,7 +163,7 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
           }
       });
 
-      _geminiToolCallSubscription = _geminiApi.onToolCall.listen((toolCall) async {
+      _geminiToolCallSubscription = _geminiApiInterface.onToolCallRequest.listen((toolCall) async {
         final functionName = toolCall['name'];
         final args = toolCall['args'] as Map<String, dynamic>;
         final toolCallId = toolCall['tool_call_id'] as String; // Assuming API sends this
@@ -192,14 +183,14 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
            print("Tool call error: $e");
         }
         
-        _geminiApi.sendToolResponse(toolCallId, result);
+        _geminiApiInterface.sendToolResponse(toolCallId, result);
         setState(() {
           _statusText = "Function $functionName executed. Result: ${jsonEncode(result)}";
            _geminiResponseText += "\nTool Result for $functionName: ${jsonEncode(result)}";
         });
       });
 
-      _geminiInterruptedSubscription = _geminiApi.onInterrupted.listen((_) {
+      _geminiInterruptedSubscription = _geminiApiInterface.onAudioReceived.listen((_) {
         setState(() {
           _statusText = "Interaction interrupted by API.";
           // Potentially stop recording/playback if active
@@ -214,7 +205,7 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
          print("Gemini API interrupted.");
       });
 
-      _geminiTurnCompleteSubscription = _geminiApi.onTurnComplete.listen((_) {
+      _geminiTurnCompleteSubscription = _geminiApiInterface.onAudioReceived.listen((_) {
         setState(() {
           _statusText = "Turn complete. Press mic for new turn.";
           // _transcribedText = ""; // Clear previous turn's transcription
@@ -226,7 +217,7 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
         // For now, these are not explicitly handled from the turnComplete message itself
       });
 
-      _geminiErrorSubscription = _geminiApi.onError.listen((errorMessage) {
+      _geminiErrorSubscription = _geminiApiInterface.onAudioReceived.listen((errorMessage) {
         setState(() {
           _statusText = "API Error: $errorMessage";
           _micStatus = MicStatus.idle; // Reset status on error
@@ -234,7 +225,7 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
         print("Gemini API error: $errorMessage");
       });
 
-      _geminiCloseSubscription = _geminiApi.onClose.listen((_) {
+      _geminiCloseSubscription = _geminiApiInterface.onAudioReceived.listen((_) {
         setState(() {
           _statusText = "API Connection closed. Please restart.";
           _micStatus = MicStatus.idle;
@@ -244,12 +235,10 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
 
       // Send initial setup message to Gemini
       // This should include system_instruction and tools if required by API
-      _geminiApi.sendDefaultSetup(
+      _geminiApiInterface.sendDefaultSetup(
           modelName: "gemini-1.5-flash-latest", // Or "gemini-1.5-pro-latest"
           tools: _geminiTools,
-          // languageCode: 'en-US' // Default is en-US in GeminiApi
-          // turnId: _currentTurnId, // For first setup, these are empty or null
-          // previousAudioId: _previousAudioId,
+          systemInstruction: _systemInstruction,
       );
       // Add system instruction if your GeminiApi's sendDefaultSetup or a specific setup message supports it.
       // For now, assuming sendDefaultSetup can be extended or a new method in GeminiApi handles this.
@@ -426,7 +415,7 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
       _recordingSubscription?.cancel();
       
       if (!_testMode) {
-        _geminiApi.sendEndMessage(); // Signal end of user audio input
+        _geminiApiInterface.sendEndMessage(); // Signal end of user audio input
       }
       
       setState(() {
@@ -473,7 +462,7 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
         _recordingSubscription = _audioHandler.recordingStream.listen((audioChunk) {
           _pcmBuffer.addAll(audioChunk);
           if (!_testMode) {
-            _geminiApi.sendAudioChunk(List<int>.from(audioChunk));
+            _geminiApiInterface.sendAudioChunk(Uint8List.fromList(audioChunk));
           }
         }, onError: (error) {
           print("Error in recording stream: $error");
@@ -486,7 +475,7 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
           // Normal stop is handled by _toggleRecording's stop path.
            if (_micStatus == MicStatus.recording) {
              if (!_testMode) {
-               _geminiApi.sendEndMessage();
+               _geminiApiInterface.sendEndMessage();
              }
              setState(() {
                _micStatus = _testMode ? MicStatus.idle : MicStatus.processing;
@@ -516,7 +505,7 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
 
     _audioHandler.dispose();
     if (!_testMode) {
-      _geminiApi.dispose();
+      _geminiApiInterface.dispose();
     }
     super.dispose();
   }
@@ -617,4 +606,51 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
       ),
     );
   }
+}
+
+/// Interface for Gemini API integration, exposing required methods for the app.
+///
+/// Usage:
+///   final gemini = GeminiApiInterface();
+///   await gemini.connect();
+///   gemini.sendAudioChunk(audioData);
+///   gemini.onAudioReceived.listen(...);
+///   gemini.onToolCallRequest.listen(...);
+///   gemini.sendToolResponse(toolCallId, result);
+///   await gemini.dispose();
+class GeminiApiInterface {
+  final GeminiApi _api = GeminiApi();
+
+  /// Connects to the Gemini WebSocket API.
+  Future<void> connect() => _api.connect();
+
+  /// Sends a chunk of PCM16 audio (Uint8List) to Gemini (base64 encoded internally).
+  void sendAudioChunk(Uint8List audioData) => _api.sendAudioChunk(audioData);
+
+  /// Stream of incoming audio (base64-encoded PCM16) from Gemini.
+  Stream<String> get onAudioReceived => _api.onAudioData;
+
+  /// Stream of tool/function call requests from Gemini.
+  Stream<Map<String, dynamic>> get onToolCallRequest => _api.onToolCallRequest;
+
+  /// Sends a tool/function response back to Gemini.
+  /// [toolCallId] is the ID from the tool call request, [result] is the function result map.
+  void sendToolResponse(String toolCallId, Map<String, dynamic> result) => _api.sendToolResponse(toolCallId, result);
+
+  /// Disposes the Gemini API connection and all streams.
+  Future<void> dispose() => _api.dispose();
+
+  /// Sends the default setup message to Gemini (optionally with tools/system instruction).
+  void sendDefaultSetup({
+    String modelName = "models/gemini-2.0-flash-exp",
+    List<Map<String, dynamic>>? tools,
+    String? systemInstruction,
+  }) => _api.sendDefaultSetup(
+        modelName: modelName,
+        tools: tools,
+        systemInstruction: systemInstruction,
+      );
+
+  /// Sends an end-of-turn message to Gemini (signals end of user input).
+  void sendEndMessage() => _api.sendEndMessage();
 }
